@@ -186,6 +186,9 @@ void Engine::prepare(double sampleRate) {
     driveMix = target.pedals.driveOn ? 1.f : 0.f;
     fuzzMix = target.pedals.fuzzOn ? 1.f : 0.f;
     for (auto& l : current.lanes) if (!l.enabled) l.level = 0.f;
+    const bool anySolo = std::any_of(target.lanes.begin(), target.lanes.end(), [](const Lane& l) { return l.solo && l.enabled; });
+    if (anySolo) for (int i = 0; i < laneCount; ++i) if (!target.lanes[i].solo) current.lanes[i].level = 0.f;
+    clearMeters();
 }
 void Engine::setParameters(const Parameters& p) noexcept {
     target = p;
@@ -216,10 +219,11 @@ void Engine::smooth() noexcept {
     s(a.drive, b.drive); s(a.driveTone, b.driveTone); s(a.driveLevel, b.driveLevel);
     s(a.sustain, b.sustain); s(a.fuzzTone, b.fuzzTone); s(a.fuzzLevel, b.fuzzLevel);
     a.fuzzType = b.fuzzType;
+    const bool anySolo = std::any_of(target.lanes.begin(), target.lanes.end(), [](const Lane& l) { return l.solo && l.enabled; });
     for (int i = 0; i < laneCount; ++i) {
         auto& x = current.lanes[i]; const auto& y = target.lanes[i];
         s(x.gain, y.gain); s(x.bass, y.bass); s(x.mid, y.mid); s(x.treble, y.treble); s(x.presence, y.presence);
-        s(x.level, y.enabled ? y.level : 0.f); s(x.pan, y.pan);
+        s(x.level, y.enabled && (!anySolo || y.solo) ? y.level : 0.f); s(x.pan, y.pan);
         cabs[i].select(y.cabinet);
     }
     s(current.delayBlend, target.delayBlend); s(current.feedback, target.feedback);
@@ -257,6 +261,7 @@ Stereo Engine::tick(float input) noexcept {
     for (int i = 0; i < laneCount; ++i) {
         const auto& p = current.lanes[i];
         const float y = cabs[i].tick(down[i]) * p.level;
+        lanePeaks[i] = std::max(lanePeaks[i], std::abs(y));
         const float angle = (p.pan + 1.f) * pi * .25f;
         dry.left += y * std::cos(angle); dry.right += y * std::sin(angle);
     }
@@ -270,6 +275,7 @@ Stereo Engine::tick(float input) noexcept {
     return result;
 }
 void Engine::process(const float* mono, float* left, float* right, std::size_t frames) noexcept {
+    clearMeters();
     for (std::size_t i = 0; i < frames; ++i) {
         const auto y = tick(mono[i]); left[i] = y.left; right[i] = y.right;
     }

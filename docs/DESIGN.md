@@ -1,5 +1,12 @@
 # Product target and engineering plan
 
+Updated requirement: the selected schematics and their components define the
+models. Musical, responsive behavior is the goal; matching a particular physical
+amp perfectly is not required. Validate electrical subsystem behavior against
+the reference circuits and SPICE, then evaluate listening and playability.
+Hardware A/B comparisons are optional refinement, not a prerequisite to this
+approach. Current implementation status is tracked in [CIRCUITS.md](CIRCUITS.md).
+
 ## Intended sound
 
 Four independently voiced power amps and cabinets should function like a single
@@ -55,7 +62,8 @@ migration; never reuse an existing ID for a different physical function.
 4. Treat the amplifier speaker load and the audible cabinet IR as different
    functions. An IR alone does not reproduce power-amp/speaker interaction.
 5. Calibrate instrument volts to dBFS. Compare clean-to-clipped transfer curves,
-   spectral envelopes, dynamic recovery and knob sweeps at several input levels.
+   spectral envelopes, dynamic recovery and knob sweeps at several input levels
+   against the circuit simulation; refine musical response through listening.
 
 Use independent states and the same oversampling mode/latency on all four lanes.
 For production, evaluate longer polyphase filters or a suitable IIR oversampler,

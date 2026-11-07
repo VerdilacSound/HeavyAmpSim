@@ -31,6 +31,20 @@ void routing() {
         l += y.left * y.left; r += y.right * y.right;
     }
     require(l > .01 && r < 1.e-12, "Hard-left pan must silence the right dry channel");
+    // Solo must remove the other branches, with every branch still enabled.
+    heavy::Parameters full;
+    for (auto& lane : full.lanes) lane.level = .6f;
+    full.lanes[2].solo = true;
+    heavy::Engine soloed, isolated;
+    soloed.setParameters(full); soloed.prepare(48000);
+    for (int i = 0; i < 4; ++i) if (i != 2) full.lanes[i].level = 0.f;
+    full.lanes[2].solo = false;
+    isolated.setParameters(full); isolated.prepare(48000);
+    for (int i = 0; i < 3000; ++i) {
+        const float in = .12f * std::sin(i * .04f);
+        const auto s = soloed.tick(in), t = isolated.tick(in);
+        require(s.left == t.left && s.right == t.right, "Solo must match the isolated audible lane");
+    }
     for (auto& lane : p.lanes) lane.enabled = false;
     a.setParameters(p); a.prepare(48000);
     for (int i = 0; i < 2000; ++i) require(energy(a.tick(.2f)) == 0., "Disabled lanes must be silent after prepare");

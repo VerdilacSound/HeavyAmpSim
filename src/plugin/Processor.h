@@ -35,6 +35,8 @@ public:
     void setStateInformation(const void*, int) override;
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float> outputPeak {0.f};
+    std::atomic<float> inputPeak {0.f};
+    std::array<std::atomic<float>, 4> lanePeaks {};
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout();
     heavy::Parameters readParameters() const noexcept;

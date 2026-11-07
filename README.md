@@ -1,8 +1,17 @@
 # HeavyAmpSim
 
+> **Component-rebuild development branch:** the native editor has been redesigned,
+> and the first electrical component primitives and Model T tone-network tests
+> are implemented. They are not yet connected to the plugin's audio path.
+> The download below is still the earlier alpha.1 sound engine. See
+> [circuit status and references](docs/CIRCUITS.md) for the exact scope.
+
+![Native JUCE development interface](docs/images/component-rebuild-ui.png)
+
 A Windows-first C++17 / JUCE VST3 project for a four-amplifier doom, stoner and
-desert rock rig. **Version 0.1 is a working routing/DSP prototype, not yet a
-schematic-accurate recreation of the requested hardware.**
+desert rock rig. The development target is musical component-modeled DSP
+derived from the selected schematics. Matching a particular analog specimen
+perfectly is not required. **The released 0.1 remains a routing/DSP prototype.**
 
 **[Download Windows x64 VST3 — v0.1.0-alpha.1 (2.9 MB)](https://github.com/VerdilacSound/HeavyAmpSim/releases/download/v0.1.0-alpha.1/HeavyAmpSim-Windows-x64-Release-VST3.zip)**
 

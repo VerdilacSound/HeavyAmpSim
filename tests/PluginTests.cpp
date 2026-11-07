@@ -25,6 +25,15 @@ int main() {
                     "Every control must survive state recall, including switches and choices");
         }
         require(std::abs(restored.parameters.getParameter("amp2.gain")->getValue() - .83f) < .00001f, "Host state must restore parameter values");
+        auto legacy = p.parameters.copyState();
+        for (int i = legacy.getNumChildren(); --i >= 0;)
+            if (legacy.getChild(i).getProperty("id").toString().endsWith(".solo")) legacy.removeChild(i, nullptr);
+        legacy.setProperty("schemaVersion", 1, nullptr);
+        juce::MemoryBlock oldSession;
+        juce::AudioProcessor::copyXmlToBinary(*legacy.createXml(), oldSession);
+        restored.parameters.getParameter("amp0.solo")->setValueNotifyingHost(1.f);
+        restored.setStateInformation(oldSession.getData(), static_cast<int>(oldSession.getSize()));
+        require(restored.parameters.getRawParameterValue("amp0.solo")->load() < .5f, "Legacy recall must clear new solo controls");
         for (const auto& spec : controlSpecs()) {
             auto* parameter = restored.parameters.getParameter(spec.id);
             parameter->setValueNotifyingHost(parameter->getDefaultValue());

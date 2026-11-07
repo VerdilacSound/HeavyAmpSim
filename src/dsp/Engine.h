@@ -17,6 +17,7 @@ struct Pedals {
 };
 struct Lane {
     bool enabled = true;
+    bool solo = false;
     float gain = .5f, bass = .5f, mid = .5f, treble = .5f, presence = .4f;
     float level = .5f, pan = 0.f;
     int cabinet = 0;
@@ -90,6 +91,8 @@ public:
     Stereo tick(float mono) noexcept;
     // All buffers are allocated in prepare, never in tick or setParameters.
     void process(const float* mono, float* left, float* right, std::size_t frames) noexcept;
+    void clearMeters() noexcept { lanePeaks.fill(0.f); }
+    const std::array<float, laneCount>& meterPeaks() const noexcept { return lanePeaks; }
 private:
     void smooth() noexcept;
     Parameters target, current;
@@ -102,5 +105,6 @@ private:
     OnePole driveTone, fuzzTone, pedalHighPass, pedalDc;
     Delay delay;
     Reverb reverb;
+    std::array<float, laneCount> lanePeaks {};
 };
 }

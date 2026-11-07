@@ -34,6 +34,7 @@ const std::vector<ControlSpec>& controlSpecs() {
         f("delayBlend", "Delay return", 0, 1, 0);
         f("reverbSize", "Size", 0, 1, .65f); f("reverbDecay", "Decay s", .2f, 12, 2.5f);
         f("reverbDamping", "Damping", 0, 1, .55f); f("reverbBlend", "Reverb return", 0, 1, 0);
+        for (int i = 0; i < 4; ++i) b("amp" + juce::String(i) + ".solo", "Solo", false);
         return s;
     }();
     return specs;
@@ -85,21 +86,26 @@ heavy::Parameters HeavyProcessor::readParameters() const noexcept {
     p.delayMode = static_cast<heavy::DelayMode>(static_cast<int>(next()));
     p.delayMs = next(); p.feedback = next(); p.delayBlend = next();
     p.reverbSize = next(); p.reverbDecay = next(); p.reverbDamping = next(); p.reverbBlend = next();
+    for (auto& lane : p.lanes) lane.solo = next() > .5f;
     return p;
 }
 void HeavyProcessor::prepareToPlay(double rate, int) {
     engine.setParameters(readParameters()); engine.prepare(rate);
     bypassHistory = {}; bypassPosition = 0;
+    inputPeak.store(0.f, std::memory_order_relaxed); outputPeak.store(0.f, std::memory_order_relaxed);
+    for (auto& peak : lanePeaks) peak.store(0.f, std::memory_order_relaxed);
     setLatencySamples(heavy::latencySamples);
 }
 void HeavyProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
     engine.setParameters(readParameters());
+    engine.clearMeters();
     auto* left = buffer.getWritePointer(0); auto* right = buffer.getWritePointer(1);
-    float peak = 0.f;
+    float peak = 0.f, inPeak = 0.f;
     const bool stereoInput = getTotalNumInputChannels() == 2;
     for (int i = 0; i < buffer.getNumSamples(); ++i) {
         const float inL = left[i], inR = stereoInput ? right[i] : inL;
+        inPeak = std::max(inPeak, std::max(std::abs(inL), std::abs(inR)));
         bypassHistory[0][bypassPosition] = inL; bypassHistory[1][bypassPosition] = inR;
         if (++bypassPosition == heavy::latencySamples) bypassPosition = 0;
         const auto y = engine.tick(.5f * (inL + inR));
@@ -107,27 +113,48 @@ void HeavyProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
         peak = std::max(peak, std::max(std::abs(y.left), std::abs(y.right)));
     }
     outputPeak.store(peak, std::memory_order_relaxed);
+    inputPeak.store(inPeak, std::memory_order_relaxed);
+    for (std::size_t i = 0; i < lanePeaks.size(); ++i) lanePeaks[i].store(engine.meterPeaks()[i], std::memory_order_relaxed);
 }
 void HeavyProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
     const bool stereoInput = getTotalNumInputChannels() == 2;
+    float input = 0.f, output = 0.f;
+    engine.clearMeters();
     for (int i = 0; i < buffer.getNumSamples(); ++i) {
         const float l = buffer.getSample(0, i), r = stereoInput ? buffer.getSample(1, i) : l;
+        input = std::max(input, std::max(std::abs(l), std::abs(r)));
         buffer.setSample(0, i, bypassHistory[0][bypassPosition]);
         buffer.setSample(1, i, bypassHistory[1][bypassPosition]);
+        output = std::max(output, std::max(std::abs(buffer.getSample(0, i)), std::abs(buffer.getSample(1, i))));
         bypassHistory[0][bypassPosition] = l; bypassHistory[1][bypassPosition] = r;
         if (++bypassPosition == heavy::latencySamples) bypassPosition = 0;
         // Advance state so resuming doesn't revive a frozen tail.
         engine.tick(0.f);
     }
+    inputPeak.store(input, std::memory_order_relaxed); outputPeak.store(output, std::memory_order_relaxed);
+    for (auto& peak : lanePeaks) peak.store(0.f, std::memory_order_relaxed);
 }
 juce::AudioProcessorEditor* HeavyProcessor::createEditor() { return new HeavyEditor(*this); }
 void HeavyProcessor::getStateInformation(juce::MemoryBlock& dest) {
-    auto state = parameters.copyState(); state.setProperty("schemaVersion", 1, nullptr);
+    auto state = parameters.copyState(); state.setProperty("schemaVersion", 2, nullptr);
     if (auto xml = state.createXml()) copyXmlToBinary(*xml, dest);
 }
 void HeavyProcessor::setStateInformation(const void* data, int bytes) {
     if (auto xml = getXmlFromBinary(data, bytes))
-        if (xml->hasTagName(parameters.state.getType())) parameters.replaceState(juce::ValueTree::fromXml(*xml));
+        if (xml->hasTagName(parameters.state.getType())) {
+            auto state = juce::ValueTree::fromXml(*xml);
+            if (static_cast<int>(state.getProperty("schemaVersion", 1)) > 2) return;
+            // Old sessions predate solo. Missing controls must use defaults,
+            // not retain whichever values happened to be active before recall.
+            for (const auto& spec : controlSpecs()) {
+                if (!state.getChildWithProperty("id", spec.id).isValid()) {
+                    juce::ValueTree child("PARAM");
+                    child.setProperty("id", spec.id, nullptr); child.setProperty("value", spec.initial, nullptr);
+                    state.appendChild(child, nullptr);
+                }
+            }
+            state.setProperty("schemaVersion", 2, nullptr); parameters.replaceState(state);
+        }
 }
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new HeavyProcessor(); }
