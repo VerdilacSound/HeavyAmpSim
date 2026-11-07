@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build, test and package Windows x64
         shell: pwsh
-        run: ./scripts/build-windows.ps1
+        run: ./scripts/build-windows.ps1 -CaptureInterface
       - uses: actions/upload-artifact@v4
         with:
           name: HeavyAmpSim-Windows-x64
@@ -24,6 +24,7 @@ jobs:
             artifacts/HeavyAmpSim-Source.zip
             artifacts/JUCE-8.0.6-Source.zip
             artifacts/SHA256SUMS.txt
+            artifacts/HeavyAmpSim-Interface.png
   release:
     name: Publish tested Windows prerelease
     needs: windows

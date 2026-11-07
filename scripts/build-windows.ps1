@@ -2,7 +2,8 @@
 param(
     [string]$Generator = 'Visual Studio 17 2022',
     [ValidateSet('Release', 'Debug')]
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [switch]$CaptureInterface
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,7 +19,8 @@ $BuildRoot = Join-Path $RepoRoot 'build-win64'
 $Bundle = Join-Path $BuildRoot "HeavyAmpSim_artefacts/$Configuration/VST3/HeavyAmpSim.vst3"
 $Binary = Join-Path $Bundle 'Contents/x86_64-win/HeavyAmpSim.vst3'
 
-& cmake -S $RepoRoot -B $BuildRoot -G $Generator -A x64
+$UiTools = if ($CaptureInterface) { 'ON' } else { 'OFF' }
+& cmake -S $RepoRoot -B $BuildRoot -G $Generator -A x64 "-DHEAVY_BUILD_UI_TOOLS=$UiTools"
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
 & cmake --build $BuildRoot --config $Configuration --parallel 4
 if ($LASTEXITCODE -ne 0) { throw 'Windows build failed.' }
@@ -49,6 +51,12 @@ foreach ($File in @('README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md')) {
     Copy-Item -LiteralPath (Join-Path $RepoRoot $File) -Destination $Stage
 }
 Copy-Item -LiteralPath (Join-Path $RepoRoot 'docs/RELEASE_NOTES.md') -Destination $Stage
+if ($CaptureInterface) {
+    $Capture = Join-Path $BuildRoot 'ui-validation.png'
+    if (-not (Test-Path -LiteralPath $Capture)) { throw 'Actual GUI capture was not produced by the UI test.' }
+    Copy-Item -LiteralPath $Capture -Destination (Join-Path $Stage 'Interface.png')
+    Copy-Item -LiteralPath $Capture -Destination (Join-Path $PackageRoot 'HeavyAmpSim-Interface.png')
+}
 
 $Cache = Get-Content -LiteralPath (Join-Path $BuildRoot 'CMakeCache.txt')
 $JuceEntry = $Cache | Select-String -Pattern '^JUCE_SOURCE_DIR:[^=]+=(.+)$' | Select-Object -First 1

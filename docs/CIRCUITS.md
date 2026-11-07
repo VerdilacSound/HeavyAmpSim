@@ -131,3 +131,7 @@ when loading schema-1 sessions.
 `heavy_ui_snapshot` renders the actual native JUCE editor for review. It is
 not a web mockup or an image-generation design. The interface marks the circuit
 rebuild and synthetic cabs as development work until those engines are replaced.
+Its smoke check also exercises GUI-to-host and host-to-GUI gain automation,
+typed pan direction, displayed knob units and the solo button's parameter
+attachment. CI builds with `-CaptureInterface` so these checks and the actual
+PNG capture run on the Windows runner as well.
