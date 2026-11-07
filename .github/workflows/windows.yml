@@ -1,0 +1,50 @@
+name: Windows VST3
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test and package Windows x64
+        shell: pwsh
+        run: ./scripts/build-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HeavyAmpSim-Windows-x64
+          if-no-files-found: error
+          path: |
+            artifacts/HeavyAmpSim-Windows-x64-Release-VST3.zip
+            artifacts/HeavyAmpSim-Source.zip
+            artifacts/JUCE-8.0.6-Source.zip
+            artifacts/SHA256SUMS.txt
+  release:
+    name: Publish tested Windows prerelease
+    needs: windows
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: HeavyAmpSim-Windows-x64
+          path: artifacts
+      - name: Publish prototype and corresponding source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" artifacts/*.zip artifacts/SHA256SUMS.txt --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" artifacts/*.zip artifacts/SHA256SUMS.txt \
+              --verify-tag --prerelease --title "HeavyAmpSim $GITHUB_REF_NAME" \
+              --notes-file docs/RELEASE_NOTES.md
+          fi
