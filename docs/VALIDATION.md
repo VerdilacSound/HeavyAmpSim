@@ -63,7 +63,7 @@ The schematic archive probe returned proxy CONNECT 403. No reference schematic
 has been obtained or matched. No GitHub workflow was dispatched, no changes
 were pushed, and no environment configuration was modified or published.
 
-## Subsequent Windows build attempt
+## Earlier cloud Windows build attempt
 
 The user subsequently requested a downloadable Windows binary. A Windows
 binary has **not** been produced yet.
@@ -92,3 +92,35 @@ To continue the cloud Windows build, review and save the domain change in
 environment settings, then recheck runtime status and the SDK request. Further
 compiler/SDK compatibility issues, if any, must be resolved before offering a
 Windows binary. The source build kit is not a compiled VST3.
+
+## GitHub Windows prerelease — completed
+
+The user subsequently authorized uploading the code and publishing a Windows
+download, and selected AGPLv3 licensing. The source and tag are now on GitHub:
+
+- Source commit: `ecf8697c69dec74305df8898900aed0561cc5242`.
+- Tag: `v0.1.0-alpha.1`.
+- Main Windows build: https://github.com/VerdilacSound/HeavyAmpSim/actions/runs/42354465719
+  — success, 3m 44s.
+- Tagged Windows build and release: https://github.com/VerdilacSound/HeavyAmpSim/actions/runs/42354503644
+  — success, 4m 8s.
+- Release: https://github.com/VerdilacSound/HeavyAmpSim/releases/tag/v0.1.0-alpha.1
+
+GitHub's Windows runner compiled the VST3/standalone targets, ran both test
+suites, packaged the VST3 and published the prerelease with corresponding
+application/JUCE sources and checksums. The earlier cloud SDK network blocker
+did not affect this native GitHub runner.
+
+The published binary ZIP was downloaded again and independently checked:
+
+- ZIP CRC integrity passes; archive size 2,864,524 bytes.
+- SHA-256 matches published SHA256SUMS.txt:
+  `b70656a6264227dc7cb28ae1e71ce57c2231cc5cab08af36532d158f0ebed966`.
+- `HeavyAmpSim.vst3/Contents/x86_64-win/HeavyAmpSim.vst3` has the PE signature
+  and x86_64 machine code (`0x8664`), and the bundle contains VST3 metadata.
+- Imports include MSVCP140, VCRUNTIME140 and VCRUNTIME140_1, so the README links
+  the Microsoft Visual C++ x64 runtime needed for installation.
+
+Real Windows DAW playback, external validator runs, visual UI review and tonal
+fidelity/listening checks remain unverified. The release is an unsigned alpha
+prototype, with the limitations stated in its release notes.

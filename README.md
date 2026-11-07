@@ -4,11 +4,17 @@ A Windows-first C++17 / JUCE VST3 project for a four-amplifier doom, stoner and
 desert rock rig. **Version 0.1 is a working routing/DSP prototype, not yet a
 schematic-accurate recreation of the requested hardware.**
 
-Windows downloads are published as experimental prereleases after GitHub's
-Windows build and tests pass: [Releases](https://github.com/VerdilacSound/HeavyAmpSim/releases).
-Choose `HeavyAmpSim-Windows-x64-Release-VST3.zip` and preserve the bundle when
-extracting it. Matching application/dependency source archives and checksums
-accompany each binary. A release appears only after its workflow succeeds.
+**[Download Windows x64 VST3 — v0.1.0-alpha.1 (2.9 MB)](https://github.com/VerdilacSound/HeavyAmpSim/releases/download/v0.1.0-alpha.1/HeavyAmpSim-Windows-x64-Release-VST3.zip)**
+
+Extract the ZIP, copy the entire `HeavyAmpSim.vst3` folder into
+`C:\Program Files\Common Files\VST3`, then rescan your DAW. Preserve the bundle's
+directory structure. Requires Windows x64 and the
+[Microsoft Visual C++ x64 runtime](https://aka.ms/vs/17/release/vc_redist.x64.exe).
+
+The [prerelease page](https://github.com/VerdilacSound/HeavyAmpSim/releases/tag/v0.1.0-alpha.1)
+includes matching application/JUCE source archives, checksums, and limitations.
+The [Windows build and tests passed](https://github.com/VerdilacSound/HeavyAmpSim/actions/runs/42354503644).
+DAW compatibility and listening validation remain pending.
 
 ## Signal path
 
